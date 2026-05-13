@@ -1,0 +1,22 @@
+name: Proxy Dispatcher
+on:
+  repository_dispatch:
+    types: [survey-response]
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const p = context.payload.client_payload;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Response] ${p.company} · ${p.name} · Score: ${p.score} · ${p.level}`,
+              body: p.body,
+              labels: ['response']
+            });
