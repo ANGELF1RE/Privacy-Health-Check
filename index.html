@@ -21,7 +21,8 @@
 
 <script>
   const GITHUB_OWNER = "ANGELF1RE";   //
-  const GITHUB_REPO  = "Privacy-Health-Check";          // 
+  const GITHUB_REPO  = "Privacy-Health-Check";          //
+  const GITHUB_TOKEN = "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"; 
 </script>
 
 <style>
@@ -503,11 +504,12 @@ ${answerRows}
   {
     method: 'POST',
     headers: {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
       'Content-Type': 'application/json',
-      // No Authorization header needed for public repos with workflow_dispatch
+      'Accept': 'application/vnd.github+json'
     },
     body: JSON.stringify({
-      ref: 'main',  // or 'master' — whatever your default branch is
+      ref: 'main',
       inputs: {
         name: payload.name,
         role: payload.role,
@@ -515,7 +517,7 @@ ${answerRows}
         email: payload.email,
         score: `${payload.total}/30 (${payload.pct}%)`,
         level: payload.level,
-        body: body  // the markdown string you already build
+        body: body
       }
     })
   }
