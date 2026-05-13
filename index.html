@@ -22,7 +22,6 @@
 <script>
   const GITHUB_OWNER = "ANGELF1RE";   //
   const GITHUB_REPO  = "Privacy-Health-Check";          //
-  const GITHUB_TOKEN = "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"; 
 </script>
 
 <style>
@@ -499,23 +498,23 @@ ${answerRows}
 
   const issueTitle = `[Response] ${payload.company} · ${payload.name} · Score: ${payload.total}/30 (${payload.level}) · ${dateStr}`;
 
-  const response = await fetch(
-  `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/save-response.yml/dispatches`,
+const response = await fetch(
+  `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/dispatches`,
   {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${GITHUB_TOKEN}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github+json'
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      ref: 'main',
-      inputs: {
+      event_type: 'survey-response',
+      client_payload: {
         name: payload.name,
         role: payload.role,
         company: payload.company,
         email: payload.email,
-        score: `${payload.total}/30 (${payload.pct}%)`,
+        score: `${payload.total}/30`,
         level: payload.level,
         body: body
       }
