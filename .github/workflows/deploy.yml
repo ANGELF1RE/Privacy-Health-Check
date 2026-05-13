@@ -23,14 +23,15 @@ jobs:
           DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
           python3 -c "
-          import os
+          import os, base64
           token = os.environ['DISPATCH_TOKEN']
+          encoded = base64.b64encode(token.encode()).decode()
           with open('index.html', 'r') as f:
               content = f.read()
-          content = content.replace('__DISPATCH_TOKEN__', token)
+          content = content.replace('__DISPATCH_TOKEN__', encoded)
           with open('index.html', 'w') as f:
               f.write(content)
-          print('Token injected successfully')
+          print('Token encoded and injected')
           "
 
       - name: Verify injection worked
