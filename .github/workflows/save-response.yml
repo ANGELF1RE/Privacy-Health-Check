@@ -31,13 +31,19 @@ jobs:
     steps:
       - name: Create GitHub Issue
         uses: actions/github-script@v7
+        env:
+          BODY: ${{ github.event.inputs.body }}
+          COMPANY: ${{ github.event.inputs.company }}
+          NAME: ${{ github.event.inputs.name }}
+          SCORE: ${{ github.event.inputs.score }}
+          LEVEL: ${{ github.event.inputs.level }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[Response] ${{ github.event.inputs.company }} · ${{ github.event.inputs.name }} · Score: ${{ github.event.inputs.score }} · ${{ github.event.inputs.level }}`,
-              body: `${{ github.event.inputs.body }}`,
+              title: `[Response] ${process.env.COMPANY} · ${process.env.NAME} · Score: ${process.env.SCORE} · ${process.env.LEVEL}`,
+              body: process.env.BODY,
               labels: ['response']
             });
