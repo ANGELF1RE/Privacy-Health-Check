@@ -1,29 +1,8 @@
 name: Save Survey Response
 
 on:
-  workflow_dispatch:
-    inputs:
-      name:
-        description: 'Respondent name'
-        required: true
-      role:
-        description: 'Role'
-        required: true
-      company:
-        description: 'Company'
-        required: true
-      email:
-        description: 'Email'
-        required: true
-      score:
-        description: 'Score'
-        required: true
-      level:
-        description: 'Level'
-        required: true
-      body:
-        description: 'Full issue body (markdown)'
-        required: true
+  repository_dispatch:
+    types: [survey-response]
 
 jobs:
   create-issue:
@@ -32,18 +11,18 @@ jobs:
       - name: Create GitHub Issue
         uses: actions/github-script@v7
         env:
-          BODY: ${{ github.event.inputs.body }}
-          COMPANY: ${{ github.event.inputs.company }}
-          NAME: ${{ github.event.inputs.name }}
-          SCORE: ${{ github.event.inputs.score }}
-          LEVEL: ${{ github.event.inputs.level }}
+          ISSUE_TITLE: ${{ github.event.client_payload.title }}
+          ISSUE_BODY: ${{ github.event.client_payload.body }}
+          LEVEL: ${{ github.event.client_payload.level }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const level = process.env.LEVEL || 'unknown';
+            const label = level.toLowerCase().replace(/\s+/g, '-');
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[Response] ${process.env.COMPANY} · ${process.env.NAME} · Score: ${process.env.SCORE} · ${process.env.LEVEL}`,
-              body: process.env.BODY,
-              labels: ['response']
+              title: process.env.ISSUE_TITLE,
+              body: process.env.ISSUE_BODY,
+              labels: ['response', label]
             });
