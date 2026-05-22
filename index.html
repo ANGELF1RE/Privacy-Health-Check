@@ -554,7 +554,8 @@ async function sendScorecardEmail(payload) {
     date:          new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
   };
 
-  await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+  const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+  console.log('EmailJS success:', result);
 }
 
 /* ── Validate & Submit ──────────────────────────────────────────── */
@@ -605,7 +606,7 @@ async function handleSubmit() {
   const emailOk  = results[1].status === 'fulfilled';
 
   if (!githubOk)  console.warn('GitHub save failed:', results[0].reason?.message);
-  if (!emailOk)   console.warn('EmailJS send failed:', results[1].reason?.message);
+  if (!emailOk) console.warn('EmailJS send failed:', results[1].reason);
 
   if (emailOk) {
     showToast(`✓ Scorecard emailed to ${email}!`);
@@ -731,9 +732,9 @@ function showToast(msg, isError = false) {
 }
 
 // Initialise EmailJS with your public key
-(function() {
+window.addEventListener('load', function() {
   emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-})();
+});
 
 buildSections();
 </script>
