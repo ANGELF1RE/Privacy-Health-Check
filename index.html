@@ -542,7 +542,7 @@ async function sendScorecardEmail(payload) {
   // Template variables — these must match what you set up in EmailJS template
   const templateParams = {
     to_name:       payload.name,
-    to_email:      payload.email,
+    email:      payload.email,
     user_email:    payload.email,   // ← add this line
     reply_to:      payload.email,   // ← add this line
     role:          payload.role,
