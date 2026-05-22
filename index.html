@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Privacy Health Check — Aumyaa</title>
 
-<!-- Open Graph / Social Sharing Meta Tags -->
 <meta property="og:title" content="Privacy Health Check — Aumyaa">
 <meta property="og:description" content="A free 5-minute assessment to gauge your organisation's readiness under India's DPDP framework. Get an instant personalised scorecard.">
 <meta property="og:type" content="website">
@@ -19,10 +18,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
 <script>
 const GITHUB_OWNER = "ANGELF1RE";
 const GITHUB_REPO  = "Privacy-Health-Check";
 const GITHUB_TOKEN = atob("__DISPATCH_TOKEN__");
+
+const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";     
+const EMAILJS_SERVICE_ID  = "service_33j96go";     
+const EMAILJS_TEMPLATE_ID = "DYJnfrPa6QzMYzZDw";    
 </script>
 
 <style>
@@ -229,7 +235,7 @@ const GITHUB_TOKEN = atob("__DISPATCH_TOKEN__");
   <div id="surveyForm">
     <div class="card">
       <div class="card-title">Let's start with your details</div>
-      <div class="card-sub">Your scorecard will reflect your organisation's current posture. We'll use your email to send a personalised executive summary.</div>
+      <div class="card-sub">Your scorecard will reflect your organisation's current posture. We'll email your personalised scorecard and executive summary right away.</div>
       <div class="field-grid">
         <div class="field"><label>Your name</label><input type="text" id="fname" placeholder="Rajesh Kumar" autocomplete="name"></div>
         <div class="field"><label>Designation</label><input type="text" id="role" placeholder="Chief Audit Officer"></div>
@@ -258,7 +264,7 @@ const GITHUB_TOKEN = atob("__DISPATCH_TOKEN__");
 </div>
 
 <footer>
-  <p>© 2025 Aumyaa. All rights reserved. &nbsp;·&nbsp; <a href="mailto:soodharshita04@gmail.com">soodharshita04@gmail.com</a></p>
+  <p>© 2025 Aumyaa Consulting Services LLP. All rights reserved. &nbsp;·&nbsp; <a href="mailto:yukti.arora@aumyaa.com">yukti.arora@aumyaa.com</a></p>
   <p style="margin-top:6px">This assessment is for awareness purposes. It does not constitute legal or compliance advice.</p>
 </footer>
 
@@ -460,7 +466,6 @@ async function saveToGitHub(payload) {
   const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
   const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-  // Build the issue body as a readable Markdown table
   const dimTable = DIMENSIONS.map(d => {
     const score = d.qIdxs.reduce((s, idx) => s + (payload.answers[idx] || 0), 0);
     const pct   = Math.round(score / d.max * 100);
@@ -520,6 +525,38 @@ ${answerRows}
   return await response.json();
 }
 
+/* ── EmailJS — Send scorecard to respondent ──────────────────────── */
+async function sendScorecardEmail(payload) {
+  // Build a plain-text dimension summary for the email template
+  const dimSummary = DIMENSIONS.map(d => {
+    const score  = d.qIdxs.reduce((s, idx) => s + (payload.answers[idx] || 0), 0);
+    const dimPct = Math.round(score / d.max * 100);
+    const bar    = dimPct >= 67 ? '🟢' : dimPct >= 34 ? '🟡' : '🔴';
+    return `${bar} ${d.name}: ${score}/${d.max} (${dimPct}%)`;
+  }).join('\n');
+
+  const concernsText = payload.concerns.length
+    ? payload.concerns.join(', ')
+    : 'None specified';
+
+  // Template variables — these must match what you set up in EmailJS template
+  const templateParams = {
+    to_name:       payload.name,
+    to_email:      payload.email,
+    role:          payload.role,
+    company:       payload.company,
+    score:         payload.total,
+    score_max:     30,
+    score_pct:     payload.pct,
+    level:         payload.level,
+    dim_summary:   dimSummary,
+    concerns:      concernsText,
+    date:          new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  };
+
+  await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+}
+
 /* ── Validate & Submit ──────────────────────────────────────────── */
 async function handleSubmit() {
   const name    = document.getElementById('fname').value.trim();
@@ -554,18 +591,26 @@ async function handleSubmit() {
 
   const payload = { name, role, company, email, total, pct, level, answers: [...answers], concerns: [...selectedConcerns] };
 
-  // Show loading state
   const btn = document.getElementById('submitBtn');
   btn.classList.add('loading');
   btn.disabled = true;
 
-  try {
-    await saveToGitHub(payload);
-    showToast('✓ Scorecard saved! Building your report…');
-  } catch (e) {
-    console.warn('GitHub save failed (continuing anyway):', e.message);
-    // Don't block the user — show scorecard even if save fails
-    showToast('Saving response…', true);
+  // Run GitHub save and EmailJS send in parallel
+  const results = await Promise.allSettled([
+    saveToGitHub(payload),
+    sendScorecardEmail(payload)
+  ]);
+
+  const githubOk = results[0].status === 'fulfilled';
+  const emailOk  = results[1].status === 'fulfilled';
+
+  if (!githubOk)  console.warn('GitHub save failed:', results[0].reason?.message);
+  if (!emailOk)   console.warn('EmailJS send failed:', results[1].reason?.message);
+
+  if (emailOk) {
+    showToast(`✓ Scorecard emailed to ${email}!`);
+  } else {
+    showToast('Building your scorecard…');
   }
 
   btn.classList.remove('loading');
@@ -620,6 +665,10 @@ function buildScorecard(name, role, company, email, total, pct, level) {
     </div>
     <div class="dim-card"><h3>Dimension-wise readiness</h3>${dimRows}</div>
     <div class="concern-card"><h3>Leadership concerns identified</h3><div class="concern-chips">${concernHtml}</div></div>
+    <div style="background:var(--green-50);border:1px solid var(--green-100);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green-300)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span style="font-size:13px;color:var(--green-700)">A copy of your scorecard has been emailed to <strong>${email}</strong>. Check your inbox (and spam folder).</span>
+    </div>
     <div class="share-card">
       <h3>Share your result</h3>
       <p>Invite your peers to take the assessment too.</p>
@@ -669,7 +718,7 @@ function handleCTASubmit() {
   if (!email || !email.includes('@')) { showToast('Please enter a valid email address.'); return; }
   const subject = encodeURIComponent('Aumyaa Privacy Health Check — Executive Summary Request');
   const body = encodeURIComponent(`Please send me the executive summary for my Privacy Health Check results.\n\nEmail: ${email}`);
-  window.location.href = `mailto:soodharshita04@gmail.com?subject=${subject}&body=${body}`;
+  window.location.href = `mailto:yukti.arora@aumyaa.com?subject=${subject}&body=${body}`;
   showToast("Request sent! We'll be in touch shortly.");
 }
 
@@ -680,6 +729,11 @@ function showToast(msg, isError = false) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3500);
 }
+
+// Initialise EmailJS with your public key
+(function() {
+  emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+})();
 
 buildSections();
 </script>
