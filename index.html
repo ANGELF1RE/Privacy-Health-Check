@@ -543,6 +543,8 @@ async function sendScorecardEmail(payload) {
   const templateParams = {
     to_name:       payload.name,
     to_email:      payload.email,
+    user_email:    payload.email,   // ← add this line
+    reply_to:      payload.email,   // ← add this line
     role:          payload.role,
     company:       payload.company,
     score:         payload.total,
